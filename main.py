@@ -1,56 +1,62 @@
 import random
+from collections import Counter
 
-def load_dictionary(file_path):
-    with open(file_path) as f:
-        words = [line.strip() for line in f]
-    return words
+def load_dictionary(path):
+    with open(path) as f:
+        return [w.strip().lower() for w in f]
 
 def is_valid_guess(guess, guesses):
     return len(guess) == 5 and guess in guesses
 
-def evaluate_guess(guess, word):
-    str = ""
+def evaluate_guess(guess, answer):
+    colours = ["\033[0m"] * 5
+    remaining = Counter()
 
+    # mark greens and count what's left
     for i in range(5):
-        if guess[i] == word[i]:
-            str += "\033[32m" + guess[i]
+        if guess[i] == answer[i]:
+            colours[i] = "\033[32m"
         else:
-            if guess[i] in word:
-                str += "\033[33m" + guess[i]
-            else:
-                str += "\033[0m" + guess[i]
-    
-    return str + "\033[0m"
+            remaining[answer[i]] += 1
+
+    # mark yellows if possible
+    for i in range(5):
+        if colours[i] == "\033[32m":
+            continue
+        if remaining[guess[i]] > 0:
+            colours[i] = "\033[33m"
+            remaining[guess[i]] -= 1
+
+    result = ""
+    for i in range(5):
+        result += colours[i] + guess[i]
+
+    return result + "\033[0m"
 
 def wordle(guesses, answers):
-    print("Welcome to Wordle! Get 6 chances to guess a 5-letter word.")
-    secret_word = random.choice(answers).lower()
+    print("Welcome to Wordle! You have 6 attempts.")
+    secret = random.choice(answers)
 
     attempts = 1
-    max_attempts = 6
 
-    while attempts <= max_attempts:
-        guess = input("Enter Guess #" + str(attempts) + ": ").lower()
-        
+    while attempts <= 6:
+        guess = input(f"Guess {attempts}: ").lower()
+
         if not is_valid_guess(guess, guesses):
-            print("Invalid guess. Please enter an English word with 5 letters.")
+            print("Invalid guess.")
             continue
 
-        if guess == secret_word:
-            print("Congratulations! You guessed the word:", secret_word)
-            break
+        print(evaluate_guess(guess, secret))
+
+        if guess == secret:
+            print("You got it!")
+            return
 
         attempts += 1
-        feedback = evaluate_guess(guess, secret_word)
-        print(feedback)
-    
-    if attempts > max_attempts:
-        print("Game over. The secret word was:", secret_word)
 
-guesses_dictionary = "guesses.txt"
-answers_dictionary = "answers.txt"
+    print("Out of guesses. The word was:", secret)
 
-guesses = load_dictionary(guesses_dictionary)
-answers = load_dictionary(answers_dictionary)
+guesses = load_dictionary("guesses.txt")
+answers = load_dictionary("answers.txt")
 
 wordle(guesses, answers)
